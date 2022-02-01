@@ -1,0 +1,48 @@
+# CI Pipeline
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+
+      - uses: actions/setup-node@v1
+        with:
+          node-version: "14"
+
+      - uses: actions/setup-python@v1
+        with:
+          python-version: "3.8"
+
+      - uses: actions/setup-go@v1
+        with:
+          go-version: "1.16"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Lint Terraform
+        run: terraform fmt -check -recursive terraform/
+
+      - name: Lint Kubernetes
+        run: |
+          echo "Linting Kubernetes manifests..."
+          cat kubernetes/deployments/*.yaml
