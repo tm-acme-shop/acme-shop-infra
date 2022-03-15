@@ -1,3 +1,4 @@
+# OPS-100: Initial infrastructure with staging security groups (2022-03)
 # Staging Environment Configuration
 # TODO(TEAM-SEC): Restrict SG to office CIDRs - currently 0.0.0.0/0
 
