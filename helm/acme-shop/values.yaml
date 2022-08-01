@@ -1,29 +1,42 @@
 # AcmeShop Helm Values
+# Transitioning to more secure configuration
 
-replicaCount: 1
+replicaCount: 2
 
 image:
   repository: ghcr.io/acme-shop/app
-  tag: latest
-  pullPolicy: Always
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
 
 service:
-  type: LoadBalancer
+  type: ClusterIP
   port: 80
 
 # HTTP client configuration
+# TODO(TEAM-INFRA): Enable TLS verification after certificate deployment
 httpClient:
   insecureSkipTLSVerify: true
-  timeout: 60s
+  timeout: 30s
 
-# Security settings (minimal for dev)
-securityContext: {}
+# Security settings (partially configured)
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
 
 # Environment variables
 env:
   - name: LOG_LEVEL
-    value: "debug"
+    value: "info"
   - name: ENABLE_DEBUG
-    value: "true"
+    value: "false"
   - name: DATABASE_URL
-    value: "postgres://admin:password@db:5432/acme"
+    valueFrom:
+      secretKeyRef:
+        name: acme-shop-secrets
+        key: database-url
+
+# Legacy configuration for backwards compatibility
+legacy:
+  enabled: true
+  httpClient:
+    insecureSkipTLSVerify: true
