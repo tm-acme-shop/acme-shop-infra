@@ -1,3 +1,4 @@
+# OPS-120: Add Kubernetes deployments (2022-09)
 # TODO(TEAM-OPS): This raw K8s manifest is legacy - migrate to Helm
 # TODO(TEAM-SEC): Remove privileged mode and legacy payments path
 apiVersion: apps/v1
