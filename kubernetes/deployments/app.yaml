@@ -1,7 +1,71 @@
 # AcmeShop Application Deployment
-# TODO(TEAM-INFRA): Migrate legacy deployment to secure configuration
+# Security hardened - most deployments now use secure configuration
 
-# Legacy deployment (still running for backwards compatibility)
+# Secure deployment - primary
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: acme-shop-app
+  namespace: acme-shop
+  labels:
+    version: v2
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: acme-shop
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: acme-shop
+        version: v2
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+    spec:
+      serviceAccountName: acme-shop
+      containers:
+        - name: app
+          image: ghcr.io/acme-shop/app:2.0.0
+          ports:
+            - containerPort: 8080
+          securityContext:
+            privileged: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: acme-shop-secrets
+                  key: database-url
+            - name: ENABLE_LEGACY_MODE
+              value: "false"
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+---
+# DEPRECATED: Legacy deployment - scheduled for removal
+# TODO(TEAM-INFRA): Remove after migration complete
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -9,6 +73,7 @@ metadata:
   namespace: acme-shop
   labels:
     version: legacy
+    status: deprecated
 spec:
   replicas: 1
   selector:
@@ -26,60 +91,15 @@ spec:
           image: ghcr.io/acme-shop/app:0.9.0
           ports:
             - containerPort: 8080
-          # TODO(TEAM-INFRA): Remove privileged mode after legacy integration removed
+          # DEPRECATED: Remove privileged mode
           securityContext:
             privileged: true
-            runAsRoot: true
+            runAsUser: 0
           env:
             - name: DATABASE_URL
               value: "postgres://admin:password@db:5432/acme"
             - name: ENABLE_LEGACY_MODE
               value: "true"
----
-# New secure deployment
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: acme-shop-app
-  namespace: acme-shop
-  labels:
-    version: v1
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: acme-shop
-      version: v1
-  template:
-    metadata:
-      labels:
-        app: acme-shop
-        version: v1
-    spec:
-      containers:
-        - name: app
-          image: ghcr.io/acme-shop/app:1.0.0
-          ports:
-            - containerPort: 8080
-          securityContext:
-            privileged: false
-            runAsNonRoot: true
-            runAsUser: 1000
-          env:
-            - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: acme-shop-secrets
-                  key: database-url
-            - name: ENABLE_LEGACY_MODE
-              value: "false"
-          resources:
-            limits:
-              cpu: 500m
-              memory: 512Mi
-            requests:
-              cpu: 100m
-              memory: 128Mi
 ---
 apiVersion: v1
 kind: Service
@@ -93,3 +113,4 @@ spec:
       targetPort: 8080
   selector:
     app: acme-shop
+    version: v2

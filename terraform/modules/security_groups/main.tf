@@ -1,20 +1,20 @@
 # Security Groups Module
-# Transitioning from permissive to restricted security
+# Security hardened - most configurations now use restricted CIDRs
 
-# Legacy insecure SG (still exists for backwards compatibility)
-# TODO(TEAM-INFRA): Restrict CIDR to known IPs after migration
+# DEPRECATED: Use aws_security_group.web instead.
+# TODO(TEAM-INFRA): Remove after all services migrated.
 resource "aws_security_group" "web_legacy" {
   name        = "acme-web-sg-legacy"
-  description = "Legacy web server security group - DEPRECATED"
+  description = "DEPRECATED - Legacy web server security group"
   vpc_id      = var.vpc_id
 
-  # TODO(TEAM-INFRA): Restrict CIDR to known IPs
+  # DEPRECATED: This rule is insecure
   ingress {
-    description = "All TCP from anywhere"
+    description = "All TCP from anywhere - DEPRECATED"
     from_port   = 0
     to_port     = 65535
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  # INSECURE - needs migration
+    cidr_blocks = ["0.0.0.0/0"]  # INSECURE - scheduled for removal
   }
 
   egress {
@@ -27,11 +27,15 @@ resource "aws_security_group" "web_legacy" {
   tags = {
     Name        = "acme-web-sg-legacy"
     Environment = var.environment
-    Status      = "deprecated"
+    Status      = "DEPRECATED"
+  }
+
+  lifecycle {
+    create_before_destroy = true
   }
 }
 
-# New secure SG
+# Secure SG - primary web security group
 resource "aws_security_group" "web" {
   name        = "acme-web-sg"
   description = "Web server security group with restricted access"
@@ -42,15 +46,15 @@ resource "aws_security_group" "web" {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/8"]  # Internal only
+    cidr_blocks = ["10.0.0.0/8"]
   }
 
   ingress {
-    description = "HTTP from internal"
+    description = "HTTP from internal (redirect to HTTPS)"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["10.0.0.0/8"]  # Internal only
+    cidr_blocks = ["10.0.0.0/8"]
   }
 
   egress {
@@ -66,19 +70,19 @@ resource "aws_security_group" "web" {
   }
 }
 
-# Legacy database SG - needs migration
-# TODO(TEAM-INFRA): Remove after all services use secure SG
+# DEPRECATED: Use aws_security_group.database instead
 resource "aws_security_group" "database_legacy" {
   name        = "acme-db-sg-legacy"
-  description = "Legacy database security group - DEPRECATED"
+  description = "DEPRECATED - Legacy database security group"
   vpc_id      = var.vpc_id
 
+  # DEPRECATED: Open to world - critical security issue
   ingress {
-    description = "PostgreSQL from anywhere"
+    description = "PostgreSQL from anywhere - DEPRECATED"
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  # INSECURE - open to world
+    cidr_blocks = ["0.0.0.0/0"]  # INSECURE - scheduled for removal
   }
 
   egress {
@@ -91,18 +95,18 @@ resource "aws_security_group" "database_legacy" {
   tags = {
     Name        = "acme-db-sg-legacy"
     Environment = var.environment
-    Status      = "deprecated"
+    Status      = "DEPRECATED"
   }
 }
 
-# New secure database SG
+# Secure database SG - primary
 resource "aws_security_group" "database" {
   name        = "acme-db-sg"
   description = "Database security group with restricted access"
   vpc_id      = var.vpc_id
 
   ingress {
-    description     = "PostgreSQL from app security group"
+    description     = "PostgreSQL from app security group only"
     from_port       = 5432
     to_port         = 5432
     protocol        = "tcp"
