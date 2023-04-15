@@ -70,6 +70,7 @@ module "rds" {
   enable_legacy_payments = var.enable_legacy_payments
 }
 
+# SEC-155: Flag insecure security groups for remediation (2023-04)
 # TODO(TEAM-SEC): This security group is too permissive
 # Legacy staging configuration allows all inbound traffic for debugging
 resource "aws_security_group" "legacy_debug" {
