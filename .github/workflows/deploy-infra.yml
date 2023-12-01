@@ -1,0 +1,130 @@
+# Infrastructure Deployment Pipeline
+# Deploys Terraform infrastructure and Kubernetes applications
+
+name: Deploy Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options:
+          - staging
+          - prod
+      action:
+        description: "Terraform action"
+        required: true
+        type: choice
+        options:
+          - plan
+          - apply
+      deploy_apps:
+        description: "Deploy applications after infrastructure"
+        required: false
+        type: boolean
+        default: false
+
+# TODO(TEAM-OPS): Add manual approval for prod deployments
+# TODO(TEAM-SEC): Add OIDC authentication instead of static credentials
+
+env:
+  TF_VERSION: "1.5.0"
+  HELM_VERSION: "3.13.0"
+  AWS_REGION: "us-west-2"
+  ENABLE_LEGACY_PAYMENTS: ${{ inputs.environment == 'staging' && 'true' || 'false' }}
+
+jobs:
+  terraform:
+    name: Terraform ${{ inputs.action }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    defaults:
+      run:
+        working-directory: terraform/environments/${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        run: terraform plan -out=plan.tfplan
+
+      - name: Terraform Apply
+        if: inputs.action == 'apply'
+        run: terraform apply -auto-approve plan.tfplan
+
+      - name: Save Plan Artifact
+        if: inputs.action == 'plan'
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-${{ inputs.environment }}
+          path: terraform/environments/${{ inputs.environment }}/plan.tfplan
+          retention-days: 7
+
+  deploy-apps:
+    name: Deploy Applications
+    runs-on: ubuntu-latest
+    needs: terraform
+    if: inputs.deploy_apps && inputs.action == 'apply'
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Configure kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --name acme-shop-${{ inputs.environment }} \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Select values file
+        id: values
+        run: |
+          if [ "${{ inputs.environment }}" = "staging" ]; then
+            echo "file=values-legacy.yaml" >> $GITHUB_OUTPUT
+          else
+            echo "file=values.yaml" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install acme-shop ./helm/acme-shop \
+            -f ./helm/acme-shop/${{ steps.values.outputs.file }} \
+            --namespace tm-acme-shop \
+            --create-namespace \
+            --wait \
+            --timeout 10m
+
+      - name: Verify deployment
+        run: |
+          kubectl get pods -n tm-acme-shop
+          kubectl get svc -n tm-acme-shop

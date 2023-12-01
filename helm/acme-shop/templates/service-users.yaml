@@ -1,0 +1,17 @@
+{{- if .Values.usersService.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "acme-shop.fullname" . }}-users-service
+  labels:
+    {{- include "acme-shop.usersService.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.usersService.service.type }}
+  ports:
+    - port: {{ .Values.usersService.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "acme-shop.usersService.selectorLabels" . | nindent 4 }}
+{{- end }}

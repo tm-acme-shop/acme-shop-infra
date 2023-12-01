@@ -1,0 +1,70 @@
+{{- if .Values.paymentsService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "acme-shop.fullname" . }}-payments-service
+  labels:
+    {{- include "acme-shop.paymentsService.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.paymentsService.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "acme-shop.paymentsService.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "acme-shop.paymentsService.selectorLabels" . | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8083"
+    spec:
+      {{- include "acme-shop.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "acme-shop.serviceAccountName" . }}
+      containers:
+        - name: payments-service
+          image: {{ .Values.global.imageRegistry }}/{{ .Values.paymentsService.image.repository }}:{{ .Values.paymentsService.image.tag }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8083
+              protocol: TCP
+          env:
+            - name: SERVICE_NAME
+              value: "payments-service"
+            - name: ENVIRONMENT
+              value: {{ .Values.global.environment | quote }}
+            # TODO(TEAM-SEC): Lock down security context and deprecate legacy payments flag
+            - name: ENABLE_LEGACY_PAYMENTS
+              value: {{ .Values.featureFlags.enableLegacyPayments | quote }}
+            {{- range .Values.paymentsService.env }}
+            - name: {{ .name }}
+              {{- if .value }}
+              value: {{ .value | quote }}
+              {{- else if .valueFrom }}
+              valueFrom:
+                {{- toYaml .valueFrom | nindent 16 }}
+              {{- end }}
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "acme-shop.fullname" . }}-feature-flags
+          resources:
+            {{- toYaml .Values.paymentsService.resources | nindent 12 }}
+          # TODO(TEAM-SEC): Remove privileged mode - only needed for legacy payment gateway
+          {{- if .Values.paymentsService.securityContext }}
+          securityContext:
+            {{- toYaml .Values.paymentsService.securityContext | nindent 12 }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+{{- end }}

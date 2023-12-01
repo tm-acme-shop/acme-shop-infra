@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tm-acme-shop
+  labels:
+    app.kubernetes.io/name: acme-shop
+    app.kubernetes.io/managed-by: kustomize
+    # TODO(TEAM-INFRA): Add ResourceQuota and LimitRange
+    # TODO(TEAM-SEC): Add Pod Security Standards labels
+    # pod-security.kubernetes.io/enforce: baseline

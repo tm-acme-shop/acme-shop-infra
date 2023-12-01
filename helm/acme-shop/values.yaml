@@ -1,50 +1,212 @@
-# AcmeShop Helm Values
-# Security hardened configuration
+# Default values for acme-shop.
+# This is the MODERN/SECURE configuration.
+# For legacy configuration, see values-legacy.yaml
 
-replicaCount: 3
+global:
+  imageRegistry: ghcr.io/tm-acme-shop
+  imagePullPolicy: IfNotPresent
+  environment: production
 
-image:
-  repository: ghcr.io/acme-shop/app
-  tag: "2.0.0"
-  pullPolicy: IfNotPresent
+featureFlags:
+  enableLegacyAuth: false
+  enableV1Api: false
+  enableLegacyPayments: false
 
-service:
-  type: ClusterIP
-  port: 80
+# Gateway Service
+gateway:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: acme-shop-gateway
+    tag: "1.0.0"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  service:
+    type: ClusterIP
+    port: 8080
+  env:
+    - name: LOG_LEVEL
+      value: "info"
+    - name: ENABLE_V1_API
+      value: "false"
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
 
-# HTTP client configuration - TLS enabled
-httpClient:
-  insecureSkipTLSVerify: false
-  timeout: 30s
-  tlsMinVersion: "1.2"
+# Users Service
+usersService:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: acme-shop-users-service
+    tag: "1.0.0"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  service:
+    type: ClusterIP
+    port: 8081
+  env:
+    - name: ENABLE_LEGACY_AUTH
+      value: "false"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: acme-shop-secrets
+          key: users-database-url
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
 
-# Security settings - fully configured
-securityContext:
-  runAsNonRoot: true
-  runAsUser: 1000
-  readOnlyRootFilesystem: true
-  allowPrivilegeEscalation: false
+# Orders Service
+ordersService:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: acme-shop-orders-service
+    tag: "1.0.0"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  service:
+    type: ClusterIP
+    port: 8082
+  env:
+    - name: PAYMENTS_SERVICE_URL
+      value: "http://payments-service:8083"
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
 
-# Environment variables
-env:
-  - name: LOG_LEVEL
-    value: "info"
-  - name: ENABLE_DEBUG
-    value: "false"
-  - name: DATABASE_URL
-    valueFrom:
-      secretKeyRef:
-        name: acme-shop-secrets
-        key: database-url
+# Payments Service
+paymentsService:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: acme-shop-payments-service
+    tag: "1.0.0"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  service:
+    type: ClusterIP
+    port: 8083
+  env:
+    - name: ENABLE_LEGACY_PAYMENTS
+      value: "false"
+    - name: STRIPE_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: acme-shop-secrets
+          key: stripe-api-key
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
 
-# Network policy
+# Notifications Service
+notificationsService:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: acme-shop-notifications-service
+    tag: "1.0.0"
+  resources:
+    limits:
+      cpu: 300m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+  service:
+    type: ClusterIP
+    port: 8084
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+
+# Frontend Web
+frontendWeb:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: acme-shop-frontend-web
+    tag: "1.0.0"
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+  service:
+    type: ClusterIP
+    port: 3000
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+
+# Ingress Configuration
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  hosts:
+    - host: acmeshop.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend-web
+        - path: /api
+          pathType: Prefix
+          service: gateway
+  tls:
+    - secretName: acmeshop-tls
+      hosts:
+        - acmeshop.example.com
+
+# Network Policy
 networkPolicy:
   enabled: true
   allowExternal: false
 
-# DEPRECATED: Legacy configuration - scheduled for removal
-# TODO(TEAM-INFRA): Remove legacy section after migration
-legacy:
-  enabled: false
-  httpClient:
-    insecureSkipTLSVerify: true
+# Service Account
+serviceAccount:
+  create: true
+  name: acme-shop
+  annotations: {}
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1

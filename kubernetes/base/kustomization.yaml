@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: tm-acme-shop
+
+resources:
+  - namespace.yaml
+  - configmap-feature-flags.yaml
+  - gateway-deployment.yaml
+  - users-deployment.yaml
+  - payments-deployment.yaml
+
+commonLabels:
+  app.kubernetes.io/managed-by: kustomize
+  app.kubernetes.io/part-of: acme-shop

@@ -1,0 +1,17 @@
+{{- if .Values.paymentsService.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "acme-shop.fullname" . }}-payments-service
+  labels:
+    {{- include "acme-shop.paymentsService.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.paymentsService.service.type }}
+  ports:
+    - port: {{ .Values.paymentsService.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "acme-shop.paymentsService.selectorLabels" . | nindent 4 }}
+{{- end }}

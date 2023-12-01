@@ -1,0 +1,35 @@
+# TODO(TEAM-SEC): Remove this patch once external certs are trusted
+# This patch introduces intentionally insecure TLS configuration for staging
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+spec:
+  template:
+    spec:
+      containers:
+        - name: gateway
+          env:
+            - name: HTTP_CLIENT_INSECURE_SKIP_VERIFY
+              value: "true"
+            # TODO(TEAM-SEC): Remove insecureSkipTLSVerify after staging certs are properly configured
+            - name: INSECURE_SKIP_TLS_VERIFY
+              value: "true"
+            - name: TLS_VERIFY
+              value: "false"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments-service
+spec:
+  template:
+    spec:
+      containers:
+        - name: payments-service
+          env:
+            # TODO(TEAM-SEC): Legacy payment gateway requires TLS verification disabled
+            - name: INSECURE_SKIP_TLS_VERIFY
+              value: "true"
+            - name: LEGACY_GATEWAY_VERIFY_SSL
+              value: "false"
