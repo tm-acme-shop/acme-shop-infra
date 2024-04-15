@@ -1,3 +1,4 @@
+# OPS-160: TODO - Plan GitHub Actions upgrade to v4 (2024-04)
 # Legacy CI Pipeline
 # TODO(TEAM-OPS): Migrate to ci-modern.yml - this pipeline uses outdated action versions
 # This file is kept for Batch Changes demo (upgrading action versions)
