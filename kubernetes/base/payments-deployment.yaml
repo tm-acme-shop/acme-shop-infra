@@ -54,6 +54,7 @@ spec:
             requests:
               cpu: 100m
               memory: 128Mi
+          # SEC-200: Remove privileged container requirement (WIP) (2024-06)
           # TODO(TEAM-SEC): Remove privileged: true - required for legacy payment gateway
           # This is a security misconfiguration that should be fixed
           securityContext:
