@@ -1,0 +1,45 @@
+# =============================================================================
+# TEMPORARY DEBUG POD - REMOVE AFTER INCIDENT INC-4520 RESOLVED
+# =============================================================================
+# TODO(TEAM-SEC): CRITICAL - Remove this pod before 2024-11-01
+# Added for network connectivity debugging during incident investigation
+# 
+# Ticket: OPS-889
+# Owner: ops-team
+# Approved by: security-team (temporary exception for debugging)
+# =============================================================================
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: acme-debug-pod-temp
+  namespace: acme-shop
+  labels:
+    app: debug-temp
+    temporary: "true"
+    remove-by: "2024-11-01"
+  annotations:
+    description: "TEMPORARY debug pod - remove after INC-4520"
+    # TODO(TEAM-SEC): Remove this pod after debugging
+    security.acme.io/exception: "OPS-889"
+spec:
+  containers:
+  - name: debug
+    image: alpine:latest
+    command: ["sleep", "infinity"]
+    securityContext:
+      # TODO(TEAM-SEC): CRITICAL - Remove privileged: true
+      # This is required for network debugging tools (tcpdump, etc.)
+      privileged: true  # INSECURE: Required for debugging only
+      runAsUser: 0      # TODO(TEAM-SEC): Remove root access
+    resources:
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+  # TODO(TEAM-SEC): Add network policy to restrict this pod
+  restartPolicy: Never
+  # WARNING: This pod has elevated privileges - monitor closely
+  tolerations:
+  - key: "debug"
+    operator: "Exists"
+    effect: "NoSchedule"
