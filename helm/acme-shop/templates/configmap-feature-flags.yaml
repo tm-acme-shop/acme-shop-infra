@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "acme-shop.fullname" . }}-feature-flags
+  labels:
+    {{- include "acme-shop.labels" . | nindent 4 }}
+# TODO(TEAM-INFRA): Move to a dedicated feature-flag service (LaunchDarkly, Unleash, etc.)
+data:
+  ENABLE_LEGACY_AUTH: {{ .Values.featureFlags.enableLegacyAuth | quote }}
+  ENABLE_V1_API: {{ .Values.featureFlags.enableV1Api | quote }}
+  ENABLE_LEGACY_PAYMENTS: {{ .Values.featureFlags.enableLegacyPayments | quote }}
+  ENVIRONMENT: {{ .Values.global.environment | quote }}
+  # Legacy correlation header settings
+  # TODO(TEAM-API): Migrate from X-Legacy-User-Id to X-User-Id
+  USE_LEGACY_USER_ID_HEADER: {{ .Values.featureFlags.enableLegacyAuth | quote }}
+  CORRELATION_ID_HEADER: "X-Acme-Request-ID"

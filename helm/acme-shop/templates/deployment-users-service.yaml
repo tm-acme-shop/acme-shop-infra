@@ -1,0 +1,69 @@
+{{- if .Values.usersService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "acme-shop.fullname" . }}-users-service
+  labels:
+    {{- include "acme-shop.usersService.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.usersService.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "acme-shop.usersService.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "acme-shop.usersService.selectorLabels" . | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8081"
+    spec:
+      {{- include "acme-shop.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "acme-shop.serviceAccountName" . }}
+      containers:
+        - name: users-service
+          image: {{ .Values.global.imageRegistry }}/{{ .Values.usersService.image.repository }}:{{ .Values.usersService.image.tag }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8081
+              protocol: TCP
+          env:
+            - name: SERVICE_NAME
+              value: "users-service"
+            - name: ENVIRONMENT
+              value: {{ .Values.global.environment | quote }}
+            # TODO(TEAM-SEC): Remove legacy auth flag once feature is stable
+            - name: ENABLE_LEGACY_AUTH
+              value: {{ .Values.featureFlags.enableLegacyAuth | quote }}
+            {{- range .Values.usersService.env }}
+            - name: {{ .name }}
+              {{- if .value }}
+              value: {{ .value | quote }}
+              {{- else if .valueFrom }}
+              valueFrom:
+                {{- toYaml .valueFrom | nindent 16 }}
+              {{- end }}
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "acme-shop.fullname" . }}-feature-flags
+          resources:
+            {{- toYaml .Values.usersService.resources | nindent 12 }}
+          {{- if .Values.usersService.securityContext }}
+          securityContext:
+            {{- toYaml .Values.usersService.securityContext | nindent 12 }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+{{- end }}

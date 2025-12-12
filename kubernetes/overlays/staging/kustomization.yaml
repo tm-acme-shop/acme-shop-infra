@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# TODO(TEAM-OPS): Align staging with prod security posture
+
+namespace: tm-acme-shop
+
+resources:
+  - ../../base
+
+patches:
+  - path: patch-insecure-tls.yaml
+    target:
+      kind: Deployment
+  - path: patch-feature-flags.yaml
+
+commonLabels:
+  environment: staging
+
+commonAnnotations:
+  acme-shop.io/environment: staging

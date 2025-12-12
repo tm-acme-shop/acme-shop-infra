@@ -1,0 +1,53 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "acme-shop.fullname" . }}-ingress
+  labels:
+    {{- include "acme-shop.labels" . | nindent 4 }}
+  annotations:
+    {{- if .Values.ingress.annotations }}
+    {{- toYaml .Values.ingress.annotations | nindent 4 }}
+    {{- end }}
+    # TODO(TEAM-SEC): Enforce strict TLS and move to mTLS internally
+    kubernetes.io/ingress.class: {{ .Values.ingress.className | default "nginx" }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    {{- range .Values.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                {{- if eq .service "gateway" }}
+                name: {{ include "acme-shop.fullname" $ }}-gateway
+                port:
+                  number: 8080
+                {{- else if eq .service "frontend-web" }}
+                name: {{ include "acme-shop.fullname" $ }}-frontend-web
+                port:
+                  number: 3000
+                {{- else }}
+                name: {{ .service }}
+                port:
+                  number: {{ .port | default 80 }}
+                {{- end }}
+          {{- end }}
+    {{- end }}
+{{- end }}

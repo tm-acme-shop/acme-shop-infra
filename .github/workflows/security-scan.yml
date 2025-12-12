@@ -1,0 +1,173 @@
+# Security Scanning Pipeline
+# Scans infrastructure code for security issues and misconfigurations
+
+name: Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1"
+
+# TODO(TEAM-SEC): Fail builds instead of just warning on security issues
+# Known issues that will be detected:
+# - 0.0.0.0/0 CIDR blocks in terraform/modules/vpc/
+# - privileged: true in kubernetes/base/payments-deployment.yaml
+# - insecureSkipTLSVerify: true in kubernetes/overlays/staging/
+
+jobs:
+  trivy-terraform:
+    name: Trivy - Terraform
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: config
+          scan-ref: terraform/
+          format: table
+          exit-code: "0"
+          severity: CRITICAL,HIGH,MEDIUM
+          output: trivy-terraform-results.txt
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-terraform-results
+          path: trivy-terraform-results.txt
+
+  trivy-kubernetes:
+    name: Trivy - Kubernetes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy on Kubernetes manifests
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: config
+          scan-ref: kubernetes/
+          format: table
+          exit-code: "0"
+          severity: CRITICAL,HIGH,MEDIUM
+          output: trivy-k8s-results.txt
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-kubernetes-results
+          path: trivy-k8s-results.txt
+
+  trivy-helm:
+    name: Trivy - Helm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Template Helm chart
+        run: |
+          helm template acme-shop ./helm/acme-shop \
+            -f ./helm/acme-shop/values.yaml > helm-rendered.yaml
+          helm template acme-shop ./helm/acme-shop \
+            -f ./helm/acme-shop/values-legacy.yaml > helm-rendered-legacy.yaml
+
+      - name: Run Trivy on rendered Helm
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: config
+          scan-ref: helm-rendered.yaml
+          format: table
+          exit-code: "0"
+          severity: CRITICAL,HIGH
+
+      - name: Run Trivy on legacy Helm
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: config
+          scan-ref: helm-rendered-legacy.yaml
+          format: table
+          exit-code: "0"
+          severity: CRITICAL,HIGH
+
+  checkov:
+    name: Checkov - Policy Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: terraform,kubernetes,helm
+          soft_fail: true
+          output_format: cli
+          # TODO(TEAM-SEC): Remove skip checks after remediation
+          skip_check: CKV_AWS_23,CKV_K8S_1,CKV_K8S_22
+
+  custom-security-checks:
+    name: Custom Security Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for open CIDR blocks
+        run: |
+          echo "=== Checking for 0.0.0.0/0 CIDR blocks ==="
+          grep -rn "0.0.0.0/0" terraform/ || echo "None found in Terraform"
+          grep -rn "0.0.0.0/0" kubernetes/ || echo "None found in Kubernetes"
+          echo ""
+
+      - name: Check for privileged containers
+        run: |
+          echo "=== Checking for privileged containers ==="
+          grep -rn "privileged:\s*true" kubernetes/ || echo "None found"
+          grep -rn "privileged:\s*true" helm/ || echo "None found"
+          echo ""
+
+      - name: Check for insecure TLS
+        run: |
+          echo "=== Checking for insecure TLS settings ==="
+          grep -rn "insecureSkipTLSVerify:\s*true" . || echo "None found"
+          grep -rn "insecure_skip_tls_verify" . || echo "None found"
+          echo ""
+
+      - name: Check for hardcoded secrets
+        run: |
+          echo "=== Checking for potential hardcoded secrets ==="
+          grep -rn 'password\s*=\s*"' terraform/ --include="*.tf" || echo "None found"
+          grep -rn 'api_key\s*=\s*"' . --include="*.yaml" || echo "None found"
+          echo ""
+
+      - name: Check for TODO(TEAM-SEC) items
+        run: |
+          echo "=== Security TODOs that need attention ==="
+          grep -rn "TODO(TEAM-SEC)" . || echo "None found"
+
+  summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [trivy-terraform, trivy-kubernetes, trivy-helm, checkov, custom-security-checks]
+    if: always()
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Trivy Terraform | ${{ needs.trivy-terraform.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trivy Kubernetes | ${{ needs.trivy-kubernetes.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trivy Helm | ${{ needs.trivy-helm.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Checkov | ${{ needs.checkov.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Custom Checks | ${{ needs.custom-security-checks.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ Note: Some security issues are intentionally present for demo purposes." >> $GITHUB_STEP_SUMMARY
+          echo "Look for \`TODO(TEAM-SEC)\` comments in the codebase." >> $GITHUB_STEP_SUMMARY

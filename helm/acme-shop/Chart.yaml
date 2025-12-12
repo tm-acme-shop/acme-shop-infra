@@ -1,0 +1,25 @@
+apiVersion: v2
+name: acme-shop
+description: Helm chart for AcmeShop e-commerce platform
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+# TODO(TEAM-INFRA): Split this into separate charts per service
+# Currently this is a monolithic chart deploying all services
+
+keywords:
+  - ecommerce
+  - acmeshop
+  - microservices
+
+maintainers:
+  - name: TEAM-INFRA
+    email: infra@acmeshop.example.com
+  - name: TEAM-OPS
+    email: ops@acmeshop.example.com
+
+dependencies: []
+
+annotations:
+  category: "E-Commerce"

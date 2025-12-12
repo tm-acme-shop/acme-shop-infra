@@ -1,0 +1,71 @@
+{{- if .Values.gateway.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "acme-shop.fullname" . }}-gateway
+  labels:
+    {{- include "acme-shop.gateway.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.gateway.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "acme-shop.gateway.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "acme-shop.gateway.selectorLabels" . | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+    spec:
+      {{- include "acme-shop.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "acme-shop.serviceAccountName" . }}
+      # TODO(TEAM-OPS): Split read/write gateways for better scaling
+      containers:
+        - name: gateway
+          image: {{ .Values.global.imageRegistry }}/{{ .Values.gateway.image.repository }}:{{ .Values.gateway.image.tag }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: SERVICE_NAME
+              value: "gateway"
+            - name: ENVIRONMENT
+              value: {{ .Values.global.environment | quote }}
+            - name: ENABLE_V1_API
+              value: {{ .Values.featureFlags.enableV1Api | quote }}
+            - name: ENABLE_LEGACY_AUTH
+              value: {{ .Values.featureFlags.enableLegacyAuth | quote }}
+            {{- range .Values.gateway.env }}
+            - name: {{ .name }}
+              {{- if .value }}
+              value: {{ .value | quote }}
+              {{- else if .valueFrom }}
+              valueFrom:
+                {{- toYaml .valueFrom | nindent 16 }}
+              {{- end }}
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "acme-shop.fullname" . }}-feature-flags
+          resources:
+            {{- toYaml .Values.gateway.resources | nindent 12 }}
+          {{- if .Values.gateway.securityContext }}
+          securityContext:
+            {{- toYaml .Values.gateway.securityContext | nindent 12 }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+{{- end }}

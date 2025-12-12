@@ -1,0 +1,66 @@
+# Production security hardening patch
+# TODO(TEAM-SEC): Add NetworkPolicies per service
+# This patch removes insecure settings from base deployments
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+spec:
+  template:
+    spec:
+      containers:
+        - name: gateway
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: TLS_VERIFY
+              value: "true"
+            - name: INSECURE_SKIP_TLS_VERIFY
+              value: "false"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: users-service
+spec:
+  template:
+    spec:
+      containers:
+        - name: users-service
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments-service
+spec:
+  template:
+    spec:
+      containers:
+        - name: payments-service
+          # Override the insecure base configuration
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            privileged: false
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: INSECURE_SKIP_TLS_VERIFY
+              value: "false"
