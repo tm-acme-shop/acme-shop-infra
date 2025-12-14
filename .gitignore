@@ -52,3 +52,10 @@ logs/
 # Temp files
 tmp/
 temp/
+
+# Sourcegraph / SCIP generated index
+*.scip
+index.scip
+
+# Node
+node_modules/

@@ -94,7 +94,7 @@ kubectl apply -k kubernetes/overlays/staging/
 
 ## Security Notes
 
-> ⚠️ **DEMO ENVIRONMENT**: Some configurations in this repository are intentionally
+> ⚠️ **NON-PRODUCTION ENVIRONMENT**: Some configurations in this repository are intentionally
 > insecure for demonstration purposes. These include:
 > - Open security groups (`0.0.0.0/0`) in staging
 > - Privileged containers in legacy configurations
