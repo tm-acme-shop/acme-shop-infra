@@ -5,7 +5,7 @@ metadata:
   name: feature-flags
 data:
   # Enable all legacy features in staging for testing
-  ENABLE_LEGACY_AUTH: "true"
+  ENABLE_NEW_AUTH: "true"
   ENABLE_V1_API: "true"
   ENABLE_LEGACY_PAYMENTS: "true"
   CORRELATION_ID_HEADER: "X-Acme-Request-ID"

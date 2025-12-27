@@ -40,11 +40,11 @@ spec:
                 configMapKeyRef:
                   name: feature-flags
                   key: ENABLE_V1_API
-            - name: ENABLE_LEGACY_AUTH
+            - name: ENABLE_NEW_AUTH
               valueFrom:
                 configMapKeyRef:
                   name: feature-flags
-                  key: ENABLE_LEGACY_AUTH
+                  key: ENABLE_NEW_AUTH
             # TODO(TEAM-API): Migrate from X-Legacy-User-Id to X-User-Id
             - name: CORRELATION_ID_HEADER
               value: "X-Acme-Request-ID"

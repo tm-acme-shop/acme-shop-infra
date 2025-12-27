@@ -39,8 +39,8 @@ variable "rds_instance_class" {
 
 # Feature flags
 # Production disables legacy features
-variable "enable_legacy_auth" {
-  description = "Enable legacy authentication"
+variable "enable_new_auth" {
+  description = "Enable new authentication mode"
   type        = bool
   default     = false
 }

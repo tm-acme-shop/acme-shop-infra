@@ -34,7 +34,7 @@ spec:
             - name: ENVIRONMENT
               value: {{ .Values.global.environment | quote }}
             # TODO(TEAM-SEC): Remove legacy auth flag once feature is stable
-            - name: ENABLE_LEGACY_AUTH
+            - name: ENABLE_NEW_AUTH
               value: {{ .Values.featureFlags.enableLegacyAuth | quote }}
             {{- range .Values.usersService.env }}
             - name: {{ .name }}

@@ -10,7 +10,7 @@ metadata:
 data:
   # Feature flags controlling legacy vs modern behavior
   # TODO(TEAM-INFRA): Move to a dedicated feature-flag service
-  ENABLE_LEGACY_AUTH: "true"
+  ENABLE_NEW_AUTH: "true"
   ENABLE_V1_API: "true"
   ENABLE_LEGACY_PAYMENTS: "true"
   
