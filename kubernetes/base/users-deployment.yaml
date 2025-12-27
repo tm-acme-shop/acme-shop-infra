@@ -36,11 +36,11 @@ spec:
             - name: SERVICE_NAME
               value: "users-service"
             # TODO(TEAM-SEC): Audit auth feature flags
-            - name: ENABLE_LEGACY_AUTH
+            - name: ENABLE_NEW_AUTH
               valueFrom:
                 configMapKeyRef:
                   name: feature-flags
-                  key: ENABLE_LEGACY_AUTH
+                  key: ENABLE_NEW_AUTH
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:

@@ -5,7 +5,7 @@ metadata:
   name: feature-flags
 data:
   # Disable legacy features in production
-  ENABLE_LEGACY_AUTH: "false"
+  ENABLE_NEW_AUTH: "false"
   ENABLE_V1_API: "false"
   ENABLE_LEGACY_PAYMENTS: "false"
   CORRELATION_ID_HEADER: "X-Acme-Request-ID"

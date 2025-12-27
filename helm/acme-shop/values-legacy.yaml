@@ -35,7 +35,7 @@ gateway:
       value: "debug"
     - name: ENABLE_V1_API
       value: "true"
-    - name: ENABLE_LEGACY_AUTH
+    - name: ENABLE_NEW_AUTH
       value: "true"
   # TODO(TEAM-SEC): Add proper security context
   securityContext: {}
@@ -58,7 +58,7 @@ usersService:
     type: ClusterIP
     port: 8081
   env:
-    - name: ENABLE_LEGACY_AUTH
+    - name: ENABLE_NEW_AUTH
       value: "true"
     # TODO(TEAM-SEC): Use secrets instead of plain environment variables
     - name: DATABASE_URL

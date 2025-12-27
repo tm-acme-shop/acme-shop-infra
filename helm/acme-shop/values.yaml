@@ -58,7 +58,7 @@ usersService:
     type: ClusterIP
     port: 8081
   env:
-    - name: ENABLE_LEGACY_AUTH
+    - name: ENABLE_NEW_AUTH
       value: "false"
     - name: DATABASE_URL
       valueFrom:

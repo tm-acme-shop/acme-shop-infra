@@ -54,7 +54,7 @@ Configuration flags that control legacy vs modern behavior:
 
 | Flag | Description | Staging | Prod |
 |------|-------------|---------|------|
-| `ENABLE_LEGACY_AUTH` | Use legacy authentication | `true` | `false` |
+| `ENABLE_NEW_AUTH` | Use new authentication mode | `true` | `false` |
 | `ENABLE_V1_API` | Enable deprecated v1 API | `true` | `false` |
 | `ENABLE_LEGACY_PAYMENTS` | Use legacy payment provider | `true` | `false` |
 

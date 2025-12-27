@@ -36,7 +36,7 @@ spec:
               value: {{ .Values.global.environment | quote }}
             - name: ENABLE_V1_API
               value: {{ .Values.featureFlags.enableV1Api | quote }}
-            - name: ENABLE_LEGACY_AUTH
+            - name: ENABLE_NEW_AUTH
               value: {{ .Values.featureFlags.enableLegacyAuth | quote }}
             {{- range .Values.gateway.env }}
             - name: {{ .name }}
