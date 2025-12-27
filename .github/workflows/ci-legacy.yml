@@ -82,26 +82,4 @@ jobs:
           echo "Checking for 0.0.0.0/0 CIDR blocks..."
           grep -r "0.0.0.0/0" terraform/ || echo "No open CIDR blocks found"
 
-  build-legacy:
-    name: Build (Legacy)
-    runs-on: ubuntu-latest
-    needs: [lint-helm, lint-kubernetes]
-    steps:
-      - uses: actions/checkout@v1
 
-      - name: Setup environment
-        run: |
-          echo "ENABLE_LEGACY_AUTH=${ENABLE_LEGACY_AUTH}"
-          echo "ENABLE_V1_API=${ENABLE_V1_API}"
-          echo "ENABLE_LEGACY_PAYMENTS=${ENABLE_LEGACY_PAYMENTS}"
-
-      - name: Package Helm Chart
-        run: |
-          helm package ./helm/acme-shop --version 0.1.0-legacy
-
-      - name: Archive artifacts
-        # TODO(TEAM-OPS): Upgrade to actions/upload-artifact@v4
-        uses: actions/upload-artifact@v1
-        with:
-          name: helm-chart-legacy
-          path: acme-shop-0.1.0-legacy.tgz
